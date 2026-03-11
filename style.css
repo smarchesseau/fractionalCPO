@@ -112,9 +112,19 @@ nav {
 }
 
 .logo {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
     font-weight: 700;
     font-size: 1.1rem;
     letter-spacing: -0.02em;
+    color: var(--text-main);
+}
+
+.logo img {
+    height: 32px;
+    width: auto;
+    border-radius: 6px;
 }
 
 .nav-links {
