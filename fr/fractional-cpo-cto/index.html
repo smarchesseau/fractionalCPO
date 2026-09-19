@@ -93,6 +93,9 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
                 <div class="lang-switch">
                     <a href="../../fractional-cpo-cto/">EN</a><span>/</span><a href="./" class="lang-active">FR</a><span>/</span><a href="../../es/fractional-cpo-cto/">ES</a>
                 </div>
+                <button class="nav-toggle" aria-label="Ouvrir le menu" aria-expanded="false">
+                    <span></span><span></span><span></span>
+                </button>
             </div>
         </div>
     </nav>
@@ -216,27 +219,6 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
     </footer>
 
     <!-- Scripts -->
-    <script>
-        document.getElementById('year').textContent = new Date().getFullYear();
-
-        const observerOptions = {
-            root: null,
-            rootMargin: '0px',
-            threshold: 0.1
-        };
-
-        const observer = new IntersectionObserver((entries, observer) => {
-            entries.forEach(entry => {
-                if (entry.isIntersecting) {
-                    entry.target.classList.add('is-visible');
-                    observer.unobserve(entry.target);
-                }
-            });
-        }, observerOptions);
-
-        document.querySelectorAll('.fade-in-section').forEach(section => {
-            observer.observe(section);
-        });
-    </script>
+    <script src="../../script.js"></script>
 </body>
 </html>

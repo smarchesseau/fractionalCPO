@@ -93,6 +93,9 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
                 <div class="lang-switch">
                     <a href="../../ai-automation/">EN</a><span>/</span><a href="./" class="lang-active">FR</a><span>/</span><a href="../../es/ai-automation/">ES</a>
                 </div>
+                <button class="nav-toggle" aria-label="Ouvrir le menu" aria-expanded="false">
+                    <span></span><span></span><span></span>
+                </button>
             </div>
         </div>
     </nav>
@@ -103,9 +106,9 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
         <div class="container" style="flex-wrap: wrap;">
             <div class="hero-subtitle fade-in-section" style="width: 100%; text-align: center; margin-bottom: 1rem;">IA &amp; Automatisation</div>
             <div class="hero-content fade-in-section">
-                <h1>Arrêtez de payer des gens pour faire un travail que le logiciel peut faire.</h1>
+                <h1>Libérez le temps de vos équipes pour le travail qui compte.</h1>
                 <p class="hero-intro">
-                    J'identifie les processus répétitifs qui consomment le temps de votre équipe et je construis des workflows pilotés par l'IA pour les automatiser.
+                    J'identifie les processus répétitifs qui consomment le temps de votre équipe et je construis des workflows pilotés par l'IA pour les automatiser, afin qu'elle puisse se concentrer sur les tâches à plus forte valeur ajoutée.
                 </p>
                 <p class="hero-highlight">Commencez par un workflow. Prouvez le ROI. Puis automatisez davantage.</p>
                 <div class="hero-actions">
@@ -292,27 +295,6 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
     </footer>
 
     <!-- Scripts -->
-    <script>
-        document.getElementById('year').textContent = new Date().getFullYear();
-
-        const observerOptions = {
-            root: null,
-            rootMargin: '0px',
-            threshold: 0.1
-        };
-
-        const observer = new IntersectionObserver((entries, observer) => {
-            entries.forEach(entry => {
-                if (entry.isIntersecting) {
-                    entry.target.classList.add('is-visible');
-                    observer.unobserve(entry.target);
-                }
-            });
-        }, observerOptions);
-
-        document.querySelectorAll('.fade-in-section').forEach(section => {
-            observer.observe(section);
-        });
-    </script>
+    <script src="../../script.js"></script>
 </body>
 </html>

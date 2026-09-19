@@ -93,6 +93,9 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
                 <div class="lang-switch">
                     <a href="./" class="lang-active">EN</a><span>/</span><a href="fr/">FR</a><span>/</span><a href="es/">ES</a>
                 </div>
+                <button class="nav-toggle" aria-label="Toggle menu" aria-expanded="false">
+                    <span></span><span></span><span></span>
+                </button>
             </div>
         </div>
     </nav>
@@ -146,25 +149,31 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
                     <h2 style="margin-bottom: 1.5rem;">Builder, Strategist & Technical Lead</h2>
                     <p>My value comes from being both a strategist and a maker.</p>
 
-                    <p>As the co-founder of <a href="https://vitto-tech.com/" target="_blank" style="color: var(--accent-color);"><strong>Vitto Agtech</strong></a>, I didn't just define the product strategy, I also built the AI models and the full-stack platform myself. This hands-on experience allows me to understand exactly what it takes to get a complex product off the ground with limited resources.</p>
+                    <p>As the co-founder of <a href="https://vitto-tech.com/" target="_blank" style="color: var(--accent-color);"><strong>Vitto Agtech</strong></a>, I didn't just define the product strategy. I also built the AI models and the full-stack platform myself. This hands-on experience allows me to understand exactly what it takes to get a complex product off the ground with limited resources.</p>
                     <p>
                     I bring 17+ years in R&D, product leadership and applied AI, starting well before the current generative AI wave, to two things: building digital products, and automating the manual work that slows companies down.
+                    </p>
+                    <p>
+                    Based in Málaga, Spain, I work fluently in English, French and Spanish.
                     </p>
 
                 </div>
                 <div class="bio-timeline">
                     <ul class="timeline-list">
                         <li class="timeline-item">
-                            <h4>Founder, <a href="https://vitto-tech.com/" target="_blank" style="color: var(--accent-color);">Vitto Agtech</a></h4>
+                            <h4>Co-Founder &amp; CTPO, <a href="https://vitto-tech.com/" target="_blank" style="color: var(--accent-color);">Vitto Agtech</a></h4>
                             <span>Current</span>
+                            <span style="display: block; margin-top: 0.25rem;">Building product strategy as a solo developer</span>
                         </li>
                         <li class="timeline-item">
-                            <h4>Former Global Head of R&D</h4>
-                            <span>Leadership Role</span>
+                            <h4>Former Director of R&D &amp; Innovation Departments</h4>
+                            <span>Leadership Roles</span>
+                            <span style="display: block; margin-top: 0.25rem;">Building departments of up to 60 people</span>
                         </li>
                         <li class="timeline-item">
-                            <h4>PhD Applied Mathematics</h4>
+                            <h4>PhD and PostDoc in Applied Mathematics</h4>
                             <span>Academic Background</span>
+                            <span style="display: block; margin-top: 0.25rem;">Automating processes with AI since 2013</span>
                         </li>
                         <li class="timeline-item">
                             <h4>1,600+ research citations</h4>
@@ -260,29 +269,6 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
     </footer>
 
     <!-- Scripts -->
-    <script>
-        // Dynamic Year
-        document.getElementById('year').textContent = new Date().getFullYear();
-
-        // Intersection Observer for Fade-in Animation
-        const observerOptions = {
-            root: null,
-            rootMargin: '0px',
-            threshold: 0.1
-        };
-
-        const observer = new IntersectionObserver((entries, observer) => {
-            entries.forEach(entry => {
-                if (entry.isIntersecting) {
-                    entry.target.classList.add('is-visible');
-                    observer.unobserve(entry.target); // Only animate once
-                }
-            });
-        }, observerOptions);
-
-        document.querySelectorAll('.fade-in-section').forEach(section => {
-            observer.observe(section);
-        });
-    </script>
+    <script src="script.js"></script>
 </body>
 </html>

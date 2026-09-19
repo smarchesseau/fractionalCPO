@@ -93,6 +93,9 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
                 <div class="lang-switch">
                     <a href="../">EN</a><span>/</span><a href="../fr/">FR</a><span>/</span><a href="./" class="lang-active">ES</a>
                 </div>
+                <button class="nav-toggle" aria-label="Abrir menú" aria-expanded="false">
+                    <span></span><span></span><span></span>
+                </button>
             </div>
         </div>
     </nav>
@@ -146,25 +149,31 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
                     <h2 style="margin-bottom: 1.5rem;">Constructora, Estratega y Líder Técnica</h2>
                     <p>Mi valor viene de ser tanto estratega como constructora.</p>
 
-                    <p>Como cofundadora de <a href="https://vitto-tech.com/" target="_blank" style="color: var(--accent-color);"><strong>Vitto Agtech</strong></a>, no solo definí la estrategia de producto, también construí yo misma los modelos de IA y la plataforma completa. Esta experiencia práctica me permite entender exactamente lo que hace falta para sacar adelante un producto complejo con recursos limitados.</p>
+                    <p>Como cofundadora de <a href="https://vitto-tech.com/" target="_blank" style="color: var(--accent-color);"><strong>Vitto Agtech</strong></a>, no solo definí la estrategia de producto, sino que también construí yo misma los modelos de IA y la plataforma completa. Esta experiencia práctica me permite entender exactamente lo que hace falta para sacar adelante un producto complejo con recursos limitados.</p>
                     <p>
                     Aporto más de 17 años en I+D, liderazgo de producto e IA aplicada, desde mucho antes de la ola actual de IA generativa, a dos cosas: construir productos digitales y automatizar el trabajo manual que frena a las empresas.
+                    </p>
+                    <p>
+                    Vivo en Málaga, España, y trabajo con fluidez en inglés, francés y español.
                     </p>
 
                 </div>
                 <div class="bio-timeline">
                     <ul class="timeline-list">
                         <li class="timeline-item">
-                            <h4>Fundadora, <a href="https://vitto-tech.com/" target="_blank" style="color: var(--accent-color);">Vitto Agtech</a></h4>
+                            <h4>Cofundadora y CTPO, <a href="https://vitto-tech.com/" target="_blank" style="color: var(--accent-color);">Vitto Agtech</a></h4>
                             <span>Actual</span>
+                            <span style="display: block; margin-top: 0.25rem;">Construyendo la estrategia de producto, desarrolladora en solitario</span>
                         </li>
                         <li class="timeline-item">
-                            <h4>Ex Directora Global de I+D</h4>
-                            <span>Cargo directivo</span>
+                            <h4>Ex Directora de los Departamentos de I+D e Innovación</h4>
+                            <span>Cargos directivos</span>
+                            <span style="display: block; margin-top: 0.25rem;">Construyendo departamentos de hasta 60 personas</span>
                         </li>
                         <li class="timeline-item">
-                            <h4>Doctorado en Matemáticas Aplicadas</h4>
+                            <h4>Doctorado y Postdoctorado en Matemáticas Aplicadas</h4>
                             <span>Formación académica</span>
+                            <span style="display: block; margin-top: 0.25rem;">Automatización con IA desde 2013</span>
                         </li>
                         <li class="timeline-item">
                             <h4>1.600+ citas de investigación</h4>
@@ -260,29 +269,6 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
     </footer>
 
     <!-- Scripts -->
-    <script>
-        // Dynamic Year
-        document.getElementById('year').textContent = new Date().getFullYear();
-
-        // Intersection Observer for Fade-in Animation
-        const observerOptions = {
-            root: null,
-            rootMargin: '0px',
-            threshold: 0.1
-        };
-
-        const observer = new IntersectionObserver((entries, observer) => {
-            entries.forEach(entry => {
-                if (entry.isIntersecting) {
-                    entry.target.classList.add('is-visible');
-                    observer.unobserve(entry.target); // Only animate once
-                }
-            });
-        }, observerOptions);
-
-        document.querySelectorAll('.fade-in-section').forEach(section => {
-            observer.observe(section);
-        });
-    </script>
+    <script src="../script.js"></script>
 </body>
 </html>
