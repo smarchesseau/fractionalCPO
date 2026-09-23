@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex, nofollow">
+<title>BD CRM Login</title>
+<link rel="stylesheet" href="css/bd.css">
+</head>
+<body class="bd-login-body">
+  <div class="bd-login-card">
+    <h1>Business Development CRM</h1>
+    <p class="bd-muted">Private admin access for stephaniemarchesseau.com</p>
+    <form id="loginForm">
+      <label>Email
+        <input type="email" id="loginEmail" required autocomplete="username">
+      </label>
+      <label>Password
+        <input type="password" id="loginPassword" required autocomplete="current-password">
+      </label>
+      <button type="submit" class="bd-btn bd-btn-primary" id="loginBtn">Sign in</button>
+    </form>
+    <p id="loginError" class="bd-error" hidden></p>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+  <script src="js/config.js"></script>
+  <script>
+    const form = document.getElementById('loginForm');
+    const errorEl = document.getElementById('loginError');
+    const btn = document.getElementById('loginBtn');
+
+    (async () => {
+      const { data: { session } } = await sb.auth.getSession();
+      if (session) window.location.href = 'index.html';
+    })();
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      errorEl.hidden = true;
+      btn.disabled = true;
+      btn.textContent = 'Signing in…';
+      const email = document.getElementById('loginEmail').value.trim();
+      const password = document.getElementById('loginPassword').value;
+      const { error } = await sb.auth.signInWithPassword({ email, password });
+      if (error) {
+        errorEl.textContent = error.message;
+        errorEl.hidden = false;
+        btn.disabled = false;
+        btn.textContent = 'Sign in';
+        return;
+      }
+      window.location.href = 'index.html';
+    });
+  </script>
+</body>
+</html>

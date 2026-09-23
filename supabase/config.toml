@@ -1,0 +1,13 @@
+project_id = "fractionalcpo-bd-crm"
+
+[functions.bd-import]
+verify_jwt = false
+
+[functions.bd-send-email]
+verify_jwt = false
+
+[functions.bd-config-status]
+verify_jwt = false
+
+[functions.bd-brevo-webhook]
+verify_jwt = false

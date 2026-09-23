@@ -1,0 +1,357 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex, nofollow">
+<title>BD CRM — stephaniemarchesseau.com</title>
+<link rel="stylesheet" href="css/bd.css">
+</head>
+<body>
+<div id="panelDenied" class="bd-login-body" hidden>
+  <div class="bd-login-card">
+    <h1>Access denied</h1>
+    <p class="bd-muted">This account is not authorized for the BD CRM.</p>
+    <button class="bd-btn" onclick="sb.auth.signOut().then(() => location.href='login.html')">Sign out</button>
+  </div>
+</div>
+
+<div id="bdShell" class="bd-shell" hidden>
+  <nav class="bd-sidebar">
+    <h1>BD CRM</h1>
+    <div class="bd-nav-item" data-panel="dashboard">Dashboard</div>
+    <div class="bd-nav-item" data-panel="import">Import</div>
+    <div class="bd-nav-item" data-panel="prospects">Prospects</div>
+    <div class="bd-nav-item" data-panel="followup1">Follow-up 1 eligible</div>
+    <div class="bd-nav-item" data-panel="followup2">Follow-up 2 eligible</div>
+    <div class="bd-nav-item" data-panel="batches">Batches</div>
+    <div class="bd-nav-item" data-panel="activity">Activity</div>
+    <div class="bd-nav-item" data-panel="settings">Settings</div>
+    <div class="bd-nav-item" id="bdSignOut" style="margin-top:1.5rem;border-top:1px solid var(--border-color);padding-top:0.75rem;">Sign out</div>
+  </nav>
+
+  <main class="bd-main">
+
+    <!-- DASHBOARD -->
+    <section id="panelDashboard" class="bd-panel">
+      <div class="bd-panel-header"><h2>Dashboard</h2></div>
+      <div id="dashStats" class="bd-stats-row"></div>
+      <div class="bd-field-row">
+        <div class="bd-card">
+          <h3>Pipeline by status</h3>
+          <div id="dashPipeline"></div>
+        </div>
+        <div class="bd-card">
+          <h3>Recent activity</h3>
+          <div id="dashActivity"></div>
+        </div>
+      </div>
+      <div class="bd-field-row">
+        <div class="bd-card">
+          <h3>Recent batches</h3>
+          <div id="dashBatches"></div>
+        </div>
+        <div class="bd-card">
+          <h3>Upcoming recommended actions</h3>
+          <div id="dashUpcoming"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- IMPORT -->
+    <section id="panelImport" class="bd-panel">
+      <div class="bd-panel-header"><h2>Import prospects</h2></div>
+      <div class="bd-card">
+        <p class="bd-muted">Upload a CSV or Excel file (.csv, .xlsx, .xls). Column names may differ — including in Spanish — and will be auto-guessed, with a chance to review below. No emails are ever sent during import.</p>
+        <input type="file" id="importFile" accept=".csv,.xlsx,.xls">
+      </div>
+      <div id="importMappingCard" class="bd-card" hidden>
+        <h3>Column mapping</h3>
+        <div id="importMappingContainer"></div>
+        <div class="bd-modal-actions">
+          <button class="bd-btn bd-btn-primary" id="importPreviewBtn">Preview import</button>
+        </div>
+      </div>
+      <div id="importPreviewCard" class="bd-card" hidden>
+        <h3>Preview</h3>
+        <div id="importSummary" class="bd-muted" style="margin-bottom:0.75rem;"></div>
+        <div id="importPreviewContainer" class="bd-table-wrap"></div>
+        <div class="bd-modal-actions">
+          <button class="bd-btn" id="importDownloadRejectedBtn">Download rejected rows</button>
+          <button class="bd-btn bd-btn-primary" id="importConfirmBtn">Confirm import</button>
+        </div>
+      </div>
+      <div id="importResultsCard" class="bd-card" hidden>
+        <h3>Import results</h3>
+        <div id="importResultsSummary"></div>
+      </div>
+    </section>
+
+    <!-- PROSPECTS -->
+    <section id="panelProspects" class="bd-panel">
+      <div class="bd-panel-header">
+        <h2>Prospects</h2>
+        <button class="bd-btn" id="exportProspectsBtn">Export CSV</button>
+      </div>
+      <div class="bd-card">
+        <div class="bd-filters">
+          <input type="search" id="pFilterSearch" placeholder="Search company, contact, email…">
+          <select id="pFilterStatus"><option value="">All statuses</option></select>
+          <select id="pFilterPriority"><option value="">All priorities</option></select>
+          <select id="pFilterApproved">
+            <option value="">Approved: any</option>
+            <option value="true">Approved</option>
+            <option value="false">Not approved</option>
+          </select>
+          <select id="pFilterDnc">
+            <option value="">Do-not-contact: any</option>
+            <option value="true">Do-not-contact only</option>
+            <option value="false">Excluding do-not-contact</option>
+          </select>
+          <select id="pFilterLocation"><option value="">All locations</option></select>
+        </div>
+      </div>
+      <div class="bd-card" id="prospectBulkBar" hidden>
+        <span id="prospectSelectedCount" class="bd-muted"></span>
+        <button class="bd-btn" data-bulk="approve">Approve</button>
+        <button class="bd-btn" data-bulk="dnc">Mark do-not-contact</button>
+        <button class="bd-btn" data-bulk="batch">Add to batch</button>
+        <button class="bd-btn" data-bulk="export">Export selected</button>
+        <button class="bd-btn bd-btn-danger" data-bulk="delete">Delete</button>
+      </div>
+      <div class="bd-card bd-table-wrap">
+        <table class="bd-data-table">
+          <thead><tr>
+            <th><input type="checkbox" id="pSelectAll"></th>
+            <th>Company</th><th>Contact</th><th>Email</th><th>Status</th>
+            <th>Priority</th><th>Approved</th><th>Last contacted</th><th></th>
+          </tr></thead>
+          <tbody id="prospectsTbody"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- FOLLOW-UP 1 -->
+    <section id="panelFollowup1" class="bd-panel">
+      <div class="bd-panel-header"><h2>Follow-up 1 eligible</h2></div>
+      <div class="bd-card" id="fu1BulkBar">
+        <span id="fu1SelectedCount" class="bd-muted"></span>
+        <button class="bd-btn bd-btn-primary" id="fu1CreateBatchBtn">Add selected to new Follow-up 1 batch</button>
+      </div>
+      <div class="bd-card bd-table-wrap">
+        <table class="bd-data-table">
+          <thead><tr>
+            <th><input type="checkbox" id="fu1SelectAll"></th>
+            <th>Company</th><th>Contact</th><th>Initial sent</th><th>Days since</th>
+            <th>Status</th><th>Follow-up preview</th><th></th>
+          </tr></thead>
+          <tbody id="fu1Tbody"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- FOLLOW-UP 2 -->
+    <section id="panelFollowup2" class="bd-panel">
+      <div class="bd-panel-header"><h2>Follow-up 2 eligible</h2></div>
+      <div class="bd-card" id="fu2BulkBar">
+        <span id="fu2SelectedCount" class="bd-muted"></span>
+        <button class="bd-btn bd-btn-primary" id="fu2CreateBatchBtn">Add selected to new Follow-up 2 batch</button>
+      </div>
+      <div class="bd-card bd-table-wrap">
+        <table class="bd-data-table">
+          <thead><tr>
+            <th><input type="checkbox" id="fu2SelectAll"></th>
+            <th>Company</th><th>Contact</th><th>Follow-up 1 sent</th><th>Days since</th>
+            <th>Status</th><th>Follow-up preview</th><th></th>
+          </tr></thead>
+          <tbody id="fu2Tbody"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- BATCHES -->
+    <section id="panelBatches" class="bd-panel">
+      <div class="bd-panel-header"><h2>Batches</h2></div>
+      <div class="bd-card bd-table-wrap">
+        <table class="bd-data-table">
+          <thead><tr>
+            <th>Name</th><th>Type</th><th>Created</th><th>Recipients</th>
+            <th>Status</th><th>Success</th><th>Failures</th><th></th>
+          </tr></thead>
+          <tbody id="batchesTbody"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- ACTIVITY -->
+    <section id="panelActivity" class="bd-panel">
+      <div class="bd-panel-header"><h2>Activity</h2>
+        <button class="bd-btn" id="exportActivityBtn">Export CSV</button>
+      </div>
+      <div class="bd-card bd-table-wrap">
+        <table class="bd-data-table">
+          <thead><tr><th>When</th><th>Action</th><th>Company</th><th>Batch</th><th>Details</th></tr></thead>
+          <tbody id="activityTbody"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- SETTINGS -->
+    <section id="panelSettings" class="bd-panel">
+      <div class="bd-panel-header"><h2>Settings</h2></div>
+      <div class="bd-card">
+        <h3>Brevo status</h3>
+        <div id="settingsBrevoStatus" class="bd-muted">Checking…</div>
+        <button class="bd-btn bd-section-gap" id="settingsTestConnectionBtn">Test Brevo connection</button>
+      </div>
+      <div class="bd-card">
+        <h3>Sending configuration</h3>
+        <form id="settingsForm">
+          <div class="bd-field-row">
+            <div class="bd-field-group">
+              <label>Follow-up 1 delay (days after initial)</label>
+              <input type="number" min="0" id="setFu1Days">
+            </div>
+            <div class="bd-field-group">
+              <label>Follow-up 2 delay (days after Follow-up 1)</label>
+              <input type="number" min="0" id="setFu2DaysAfterFu1">
+            </div>
+            <div class="bd-field-group">
+              <label>Follow-up 2 delay (days after initial, alternative trigger)</label>
+              <input type="number" min="0" id="setFu2DaysAfterInitial">
+            </div>
+            <div class="bd-field-group">
+              <label>Daily sending limit</label>
+              <input type="number" min="1" id="setDailyLimit">
+            </div>
+            <div class="bd-field-group">
+              <label>Default test recipient</label>
+              <input type="email" id="setTestRecipient">
+            </div>
+            <div class="bd-field-group">
+              <label>Reply-to email</label>
+              <input type="email" id="setReplyTo">
+            </div>
+          </div>
+          <div class="bd-field-group">
+            <label>Default email signature</label>
+            <textarea id="setSignature" rows="4"></textarea>
+          </div>
+          <button type="submit" class="bd-btn bd-btn-primary">Save settings</button>
+        </form>
+      </div>
+      <div class="bd-card">
+        <h3>Data repair</h3>
+        <p class="bd-muted">Some imported rows have their subject line embedded in the email body (e.g. a "Subject:" or "Asunto:" line the parser didn't recognize at import time). This scans every prospect's initial, Follow-up 1 and Follow-up 2 bodies, moves any such line into the subject field, and removes it from the body. Safe to run more than once — rows with nothing to fix are left untouched.</p>
+        <button class="bd-btn bd-section-gap" id="settingsRepairSubjectsBtn">Repair embedded subject lines</button>
+        <div id="settingsRepairResult" class="bd-muted" style="margin-top:0.6rem;"></div>
+        <hr style="border-color:var(--border-color);margin:1rem 0;">
+        <p class="bd-muted">Some imported bodies already end with their own sign-off, which would otherwise get your default signature appended a second time on top of it. This removes the trailing paragraph containing <code>AI · Automation · Product</code> from every prospect's initial, Follow-up 1 and Follow-up 2 body — safe to run more than once.</p>
+        <button class="bd-btn bd-section-gap" id="settingsStripSignatureBtn">Strip existing signatures from bodies</button>
+        <div id="settingsStripSignatureResult" class="bd-muted" style="margin-top:0.6rem;"></div>
+      </div>
+    </section>
+
+  </main>
+</div>
+
+<!-- Prospect detail drawer -->
+<div class="bd-drawer-overlay" id="bdDrawerOverlay">
+  <div class="bd-drawer" id="bdProspectDrawer" onclick="event.stopPropagation()"></div>
+</div>
+
+<!-- Batch detail modal -->
+<dialog class="bd-modal bd-modal-lg" id="bdBatchModal"></dialog>
+
+<!-- Add-to-batch modal -->
+<dialog class="bd-modal" id="bdAddToBatchModal">
+  <h3 id="bdAddToBatchTitle">Create batch</h3>
+  <div class="bd-field-group">
+    <label>Batch name</label>
+    <input type="text" id="bdNewBatchName">
+  </div>
+  <div class="bd-modal-actions">
+    <button class="bd-btn" onclick="document.getElementById('bdAddToBatchModal').close()">Cancel</button>
+    <button class="bd-btn bd-btn-primary" id="bdAddToBatchConfirmBtn">Create</button>
+  </div>
+</dialog>
+
+<!-- Generic confirm modal -->
+<dialog class="bd-modal" id="bdConfirmModal">
+  <p id="bdConfirmMessage"></p>
+  <div class="bd-modal-actions">
+    <button class="bd-btn" onclick="document.getElementById('bdConfirmModal').close()">Cancel</button>
+    <button class="bd-btn bd-btn-primary" id="bdConfirmBtn">Confirm</button>
+  </div>
+</dialog>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<script src="js/config.js"></script>
+<script src="js/bdCore.js"></script>
+<script src="js/bdDashboard.js"></script>
+<script src="js/bdImport.js"></script>
+<script src="js/bdProspects.js"></script>
+<script src="js/bdFollowups.js"></script>
+<script src="js/bdBatches.js"></script>
+<script src="js/bdActivity.js"></script>
+<script src="js/bdSettings.js"></script>
+<script>
+  let bdIsAuthed = false;
+
+  function bdGo(panel) {
+    document.querySelectorAll('.bd-panel').forEach((p) => p.classList.remove('active'));
+    document.querySelectorAll('.bd-nav-item[data-panel]').forEach((n) => n.classList.remove('active'));
+    document.getElementById('panel' + panel[0].toUpperCase() + panel.slice(1)).classList.add('active');
+    document.querySelector(`.bd-nav-item[data-panel="${panel}"]`).classList.add('active');
+    if (panel === 'dashboard') bdLoadDashboard();
+    if (panel === 'import') bdResetImport();
+    if (panel === 'prospects') bdLoadProspects();
+    if (panel === 'followup1') bdLoadFollowups('followup1');
+    if (panel === 'followup2') bdLoadFollowups('followup2');
+    if (panel === 'batches') bdLoadBatches();
+    if (panel === 'activity') bdLoadActivity();
+    if (panel === 'settings') bdLoadSettings();
+  }
+
+  document.querySelectorAll('.bd-nav-item[data-panel]').forEach((el) => {
+    el.addEventListener('click', () => bdGo(el.dataset.panel));
+  });
+  document.getElementById('bdSignOut').addEventListener('click', async () => {
+    await sb.auth.signOut();
+    window.location.href = 'login.html';
+  });
+  document.getElementById('bdDrawerOverlay').addEventListener('click', () => bdCloseDrawer());
+
+  async function bdInit() {
+    const { data: { session } } = await sb.auth.getSession();
+    if (!session) { window.location.href = 'login.html'; return; }
+
+    // The real gate is RLS + the Edge Functions' own auth check; this only
+    // decides whether to show the UI shell or the denied screen. Retry
+    // once after a short delay -- right after the redirect from login.html
+    // the client can occasionally issue its first request before the
+    // session's auth header is fully attached, causing a spurious denial.
+    let { error } = await sb.from('bd_settings').select('id').limit(1);
+    if (error) {
+      await new Promise((r) => setTimeout(r, 400));
+      ({ error } = await sb.from('bd_settings').select('id').limit(1));
+    }
+
+    if (error) {
+      console.error('BD CRM access check failed:', error);
+      document.getElementById('panelDenied').hidden = false;
+      document.getElementById('bdShell').hidden = true;
+      return;
+    }
+    document.getElementById('panelDenied').hidden = true;
+    bdIsAuthed = true;
+    document.getElementById('bdShell').hidden = false;
+    bdGo('dashboard');
+  }
+
+  bdInit();
+</script>
+</body>
+</html>
