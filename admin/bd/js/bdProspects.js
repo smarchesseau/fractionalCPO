@@ -53,9 +53,9 @@ function bdRenderProspectsTable() {
       <td><a href="#" data-open="${p.id}">${bdEscapeHtml(p.company)}</a></td>
       <td>${bdEscapeHtml(p.contact_name || '—')}</td>
       <td>${bdEscapeHtml(p.email)}</td>
-      <td>${bdStatusBadge(p.status)}</td>
+      <td>${bdRowStatusSelect(p)}</td>
       <td>${bdEscapeHtml(p.priority || '—')}</td>
-      <td>${p.approved ? '✓' : ''}</td>
+      <td><input type="checkbox" class="bd-row-approved" data-id="${p.id}" ${p.approved ? 'checked' : ''} title="Approved"></td>
       <td>${bdFormatDate(p.last_contacted_at)}</td>
       <td><button class="bd-btn bd-btn-sm" data-open="${p.id}">Open</button></td>
     </tr>`).join('') || '<tr><td colspan="9" class="bd-muted">No prospects match these filters.</td></tr>';
@@ -65,7 +65,51 @@ function bdRenderProspectsTable() {
     if (cb.checked) bdSelectedProspectIds.add(cb.dataset.id); else bdSelectedProspectIds.delete(cb.dataset.id);
     bdUpdateProspectBulkBar();
   }));
+  document.querySelectorAll('.bd-row-status-select').forEach((sel) => sel.addEventListener('change', () => bdHandleRowStatusChange(sel)));
+  document.querySelectorAll('.bd-row-approved').forEach((cb) => cb.addEventListener('change', async () => {
+    const { error } = await sb.from('bd_prospects').update({ approved: cb.checked }).eq('id', cb.dataset.id);
+    if (error) { bdToast('Failed to update: ' + error.message, 'error'); return; }
+    const cached = bdAllProspects.find((p) => p.id === cb.dataset.id);
+    if (cached) cached.approved = cb.checked;
+    bdToast(cb.checked ? 'Approved.' : 'Approval removed.', 'success');
+    bdRenderProspectsTable();
+  }));
   bdUpdateProspectBulkBar();
+}
+
+function bdRowStatusSelect(p) {
+  const color = BD_STATUS_MAP[p.status]?.color;
+  const style = BD_BTN_COLOR_VARS[color] ? ` style="border-color:${BD_BTN_COLOR_VARS[color]};color:${BD_BTN_COLOR_VARS[color]}"` : '';
+  return `<select class="bd-row-status-select" data-prospect-id="${p.id}" data-current="${p.status}"${style}>
+    ${BD_STATUSES.map((s) => `<option value="${s.value}" ${s.value === p.status ? 'selected' : ''}>${s.label}</option>`).join('')}
+  </select>`;
+}
+
+async function bdHandleRowStatusChange(sel) {
+  const id = sel.dataset.prospectId;
+  const previous = sel.dataset.current;
+  const newStatus = sel.value;
+  if (newStatus === previous) return;
+
+  const apply = async () => {
+    const update = { status: newStatus };
+    if (newStatus === 'do_not_contact') update.do_not_contact = true;
+    else if (previous === 'do_not_contact') update.do_not_contact = false;
+    await sb.from('bd_prospects').update(update).eq('id', id);
+    bdToast('Status updated.', 'success');
+    bdLoadProspects();
+  };
+
+  if (newStatus === 'do_not_contact') {
+    sel.value = previous; // revert visually until confirmed; re-render applies the real value on confirm
+    bdOpenConfirmModal(
+      'Mark this prospect as do-not-contact? They will be excluded from all future sending.',
+      apply,
+      { danger: true, confirmLabel: 'Mark do-not-contact' },
+    );
+  } else {
+    await apply();
+  }
 }
 
 function bdUpdateProspectBulkBar() {
@@ -102,6 +146,12 @@ document.querySelectorAll('#prospectBulkBar [data-bulk]').forEach((btn) => {
     if (action === 'approve') {
       await sb.from('bd_prospects').update({ approved: true }).in('id', ids);
       bdToast(`Approved ${ids.length} prospects.`, 'success');
+    } else if (action === 'unapprove') {
+      await sb.from('bd_prospects').update({ approved: false }).in('id', ids);
+      bdToast(`Removed approval from ${ids.length} prospects.`, 'success');
+    } else if (action === 'undnc') {
+      await sb.from('bd_prospects').update({ do_not_contact: false }).in('id', ids);
+      bdToast(`Cleared do-not-contact for ${ids.length} prospects.`, 'success');
     } else if (action === 'dnc') {
       bdOpenConfirmModal(`Mark ${ids.length} prospects as do-not-contact? They will be excluded from all future sending.`, async () => {
         await sb.from('bd_prospects').update({ do_not_contact: true, status: 'do_not_contact' }).in('id', ids);
@@ -133,15 +183,18 @@ document.querySelectorAll('#prospectBulkBar [data-bulk]').forEach((btn) => {
 // --- Prospect detail drawer ---
 
 const BD_MANUAL_ACTIONS = [
-  { status: 'replied', label: 'Mark replied' },
-  { status: 'interested', label: 'Mark interested' },
-  { status: 'meeting_booked', label: 'Mark meeting booked' },
-  { status: 'proposal_sent', label: 'Mark proposal sent' },
-  { status: 'won', label: 'Mark won' },
-  { status: 'not_interested', label: 'Mark not interested' },
+  { status: 'replied', label: 'Mark replied', color: 'purple' },
+  { status: 'interested', label: 'Mark interested', color: 'purple' },
+  { status: 'meeting_booked', label: 'Mark meeting booked', color: 'purple' },
+  { status: 'proposal_sent', label: 'Mark proposal sent', color: 'purple' },
+  { status: 'won', label: 'Mark won', color: 'green' },
+  { status: 'not_interested', label: 'Mark not interested', color: 'red' },
+  { status: 'invalid_email', label: 'Mark invalid email', color: 'red' },
+  { status: 'bounced', label: 'Mark bounced', color: 'red' },
   { status: 'do_not_contact', label: 'Mark do not contact', danger: true },
-  { status: 'closed', label: 'Close prospect' },
+  { status: 'closed', label: 'Close prospect', color: 'gray' },
 ];
+const BD_BTN_COLOR_VARS = { purple: 'var(--purple-color)', green: 'var(--accent-color)', red: 'var(--danger-color)', gray: 'var(--text-muted)' };
 
 async function bdOpenProspectDrawer(id) {
   const { data: p, error } = await sb.from('bd_prospects').select('*').eq('id', id).single();
@@ -196,13 +249,17 @@ async function bdOpenProspectDrawer(id) {
       <div class="bd-field-group"><label>Automation opportunities</label><textarea rows="2" data-field="automation_opportunities">${bdEscapeHtml(p.automation_opportunities || '')}</textarea></div>
       <div class="bd-field-group"><label>Notes</label><textarea rows="3" data-field="notes">${bdEscapeHtml(p.notes || '')}</textarea></div>
       <button class="bd-btn bd-btn-primary" id="bdDrawerSaveBtn">Save changes</button>
-      ${!p.approved ? `<button class="bd-btn" id="bdDrawerApproveBtn">Approve</button>` : ''}
+      <button class="bd-btn" id="bdDrawerToggleApproveBtn">${p.approved ? 'Un-approve' : 'Approve'}</button>
+      ${p.do_not_contact ? `<button class="bd-btn" id="bdDrawerClearDncBtn">Clear do-not-contact</button>` : ''}
     </div>
 
     <div class="bd-card">
       <h3>Manual actions</h3>
       <div style="display:flex;flex-wrap:wrap;gap:0.5rem;">
-        ${BD_MANUAL_ACTIONS.map((a) => `<button class="bd-btn bd-btn-sm ${a.danger ? 'bd-btn-danger' : ''}" data-manual-status="${a.status}">${a.label}</button>`).join('')}
+        ${BD_MANUAL_ACTIONS.map((a) => {
+          const style = !a.danger && a.color ? ` style="border-color:${BD_BTN_COLOR_VARS[a.color]};color:${BD_BTN_COLOR_VARS[a.color]}"` : '';
+          return `<button class="bd-btn bd-btn-sm ${a.danger ? 'bd-btn-danger' : ''}"${style} data-manual-status="${a.status}">${a.label}</button>`;
+        }).join('')}
         <button class="bd-btn bd-btn-sm" id="bdDrawerUndoBtn">Undo last status change</button>
       </div>
     </div>
@@ -224,11 +281,20 @@ async function bdOpenProspectDrawer(id) {
 
   document.getElementById('bdDrawerCloseBtn').addEventListener('click', bdCloseDrawer);
   document.getElementById('bdDrawerSaveBtn').addEventListener('click', () => bdSaveProspectFromDrawer(p.id));
-  document.getElementById('bdDrawerApproveBtn')?.addEventListener('click', async () => {
-    await sb.from('bd_prospects').update({ approved: true }).eq('id', p.id);
-    bdToast('Approved.', 'success');
+  document.getElementById('bdDrawerToggleApproveBtn').addEventListener('click', async () => {
+    const newApproved = !p.approved;
+    await sb.from('bd_prospects').update({ approved: newApproved }).eq('id', p.id);
+    bdToast(newApproved ? 'Approved.' : 'Approval removed.', 'success');
     bdOpenProspectDrawer(p.id);
     bdLoadProspects();
+  });
+  document.getElementById('bdDrawerClearDncBtn')?.addEventListener('click', () => {
+    bdOpenConfirmModal('Clear do-not-contact for this prospect?', async () => {
+      await sb.from('bd_prospects').update({ do_not_contact: false, status: p.status === 'do_not_contact' ? 'new' : p.status }).eq('id', p.id);
+      bdToast('Do-not-contact cleared.', 'success');
+      bdOpenProspectDrawer(p.id);
+      bdLoadProspects();
+    }, { confirmLabel: 'Clear' });
   });
   drawer.querySelectorAll('[data-manual-status]').forEach((btn) => {
     btn.addEventListener('click', () => {

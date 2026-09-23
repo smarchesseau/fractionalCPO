@@ -1,4 +1,6 @@
 let bdActiveSendingBatchId = null;
+let bdStopRequestedBatchId = null;
+let bdBatchModalCurrentId = null; // which batch the shared modal DOM currently displays
 let bdBatchLog = [];
 let bdAddToBatchProspectIds = [];
 
@@ -21,10 +23,17 @@ async function bdLoadBatches() {
       <td>${b.completed ? '<span class="bd-badge bd-badge-green">Completed</span>' : b.sending ? '<span class="bd-badge bd-badge-amber">Sending / paused</span>' : '<span class="bd-badge bd-badge-gray">Draft</span>'}</td>
       <td>${b.success_count}</td>
       <td>${b.failure_count}</td>
-      <td><button class="bd-btn bd-btn-sm" data-open-batch="${b.id}">Open</button></td>
+      <td>
+        <button class="bd-btn bd-btn-sm" data-open-batch="${b.id}">Open</button>
+        ${b.sending && bdActiveSendingBatchId === b.id ? `<button class="bd-btn bd-btn-sm bd-btn-danger" data-stop-batch="${b.id}">Stop</button>` : ''}
+      </td>
     </tr>`).join('') || '<tr><td colspan="8" class="bd-muted">No batches yet.</td></tr>';
 
   document.querySelectorAll('[data-open-batch]').forEach((el) => el.addEventListener('click', () => bdOpenBatchDetail(el.dataset.openBatch)));
+  document.querySelectorAll('[data-stop-batch]').forEach((el) => el.addEventListener('click', () => {
+    bdStopRequestedBatchId = el.dataset.stopBatch;
+    bdToast('Stopping after the current send…');
+  }));
   for (const b of data) {
     sb.from('bd_batch_members').select('id', { count: 'exact', head: true }).eq('batch_id', b.id).then(({ count }) => {
       const cell = document.getElementById(`batchCount_${b.id}`);
@@ -116,6 +125,7 @@ function bdBatchMemberStatusBadge(status) {
 async function bdOpenBatchDetail(batchId) {
   const { data: batch } = await sb.from('bd_batches').select('*').eq('id', batchId).single();
   if (!batch) { bdToast('Batch not found.', 'error'); return; }
+  bdBatchModalCurrentId = batchId;
   bdBatchLog = [];
 
   const modal = document.getElementById('bdBatchModal');
@@ -133,8 +143,10 @@ async function bdOpenBatchDetail(batchId) {
         <button class="bd-btn" id="bdBatchTestSendBtn">Send test</button>
         <label style="margin-left:1rem;"><input type="checkbox" id="bdBatchApproveCheckbox"> I've reviewed every email in this batch</label>
         <button class="bd-btn bd-btn-primary" id="bdBatchSendBtn" disabled>Confirm and send batch</button>
+        <button class="bd-btn bd-btn-danger" id="bdBatchStopBtn" hidden>Stop sending</button>
       </div>
       <p class="bd-muted" id="bdBatchGateNote" style="margin-top:0.5rem;">Send a test to yourself before the batch can be confirmed.</p>
+      <p class="bd-muted" style="font-size:0.78rem;">Sending continues even if you close this window or switch tabs, as long as this browser tab stays open.</p>
     </div>
     <div class="bd-card bd-section-gap bd-table-wrap">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.6rem;">
@@ -162,11 +174,21 @@ async function bdOpenBatchDetail(batchId) {
   document.getElementById('bdBatchTestSendBtn').addEventListener('click', () => bdSendBatchTest(batchId));
   document.getElementById('bdBatchApproveCheckbox').addEventListener('change', () => bdUpdateSendGate(batchId));
   document.getElementById('bdBatchSendBtn').addEventListener('click', () => bdConfirmAndSendBatch(batchId));
+  document.getElementById('bdBatchStopBtn').addEventListener('click', () => {
+    bdStopRequestedBatchId = batchId;
+    bdToast('Stopping after the current send…');
+  });
 
   modal.showModal();
 }
 
 async function bdRefreshBatchDetail(batchId) {
+  // The batch detail modal is a single shared DOM element. If sending is
+  // running in the background for a batch other than the one currently
+  // displayed, skip touching the DOM so it doesn't clobber whatever batch
+  // the user has open right now.
+  if (bdBatchModalCurrentId !== batchId) return;
+
   const { data: batch } = await sb.from('bd_batches').select('*').eq('id', batchId).single();
   const { data: members } = await sb.from('bd_batch_members').select('*, bd_prospects(company, email)').eq('batch_id', batchId).order('position');
   if (!batch) return;
@@ -220,6 +242,8 @@ async function bdRefreshBatchDetail(batchId) {
 
   const gateBtn = document.getElementById('bdBatchSendBtn');
   const gateNote = document.getElementById('bdBatchGateNote');
+  const stopBtn = document.getElementById('bdBatchStopBtn');
+  stopBtn.hidden = !(batch.sending && bdActiveSendingBatchId === batchId);
   if (batch.test_sent) gateBtn.dataset.testSent = 'true';
   if (batch.completed) {
     gateBtn.disabled = true;
@@ -231,7 +255,7 @@ async function bdRefreshBatchDetail(batchId) {
   } else if (batch.sending) {
     gateBtn.disabled = true;
     gateBtn.textContent = 'Sending…';
-    gateNote.textContent = batch.stopped_reason ? `Paused: ${batch.stopped_reason}. Use Resume to continue.` : 'Currently sending — leave this open or come back later.';
+    gateNote.textContent = batch.stopped_reason ? `Paused: ${batch.stopped_reason}. Use Resume to continue.` : 'Currently sending — this continues even if you close this window, as long as the browser tab stays open.';
     if (batch.stopped_reason && bdActiveSendingBatchId !== batchId) {
       gateBtn.disabled = false;
       gateBtn.textContent = 'Resume sending';
@@ -317,7 +341,11 @@ async function bdSendBatchTest(batchId) {
   bdToast('Test email sent — check your inbox before confirming the batch.', 'success');
 }
 
-function bdAppendBatchLog(line, kind = 'info') {
+function bdAppendBatchLog(batchId, line, kind = 'info') {
+  // Same reasoning as bdRefreshBatchDetail: don't write into the log panel
+  // if it's currently showing a different batch. Full history always lives
+  // in bd_activity regardless -- this is just the live in-session view.
+  if (bdBatchModalCurrentId !== batchId) return;
   const time = new Date().toLocaleTimeString();
   bdBatchLog.unshift(`<div style="color:${kind === 'error' ? 'var(--danger-color)' : kind === 'success' ? 'var(--accent-color)' : 'var(--text-muted)'}">[${time}] ${bdEscapeHtml(line)}</div>`);
   document.getElementById('bdBatchLogPanel').innerHTML = bdBatchLog.join('');
@@ -331,7 +359,7 @@ async function bdConfirmAndSendBatch(batchId) {
   const { count: pendingCount } = await sb.from('bd_batch_members').select('id', { count: 'exact', head: true }).eq('batch_id', batchId).eq('status', 'pending');
 
   bdOpenConfirmModal(
-    `Send this batch of ${pendingCount} email(s) now? Sending is manual, one recipient at a time, with a 30-90 second pause between each. You can close this window and come back — sending continues to record progress and won't restart already-sent emails.`,
+    `Send this batch of ${pendingCount} email(s) now? Sending is manual, one recipient at a time, with a 5-15 second pause between each. You can close this window and it keeps running in the background as long as this browser tab stays open — reopen the batch anytime to check progress or stop it.`,
     async () => {
       bdSendButtonLock = true;
       document.getElementById('bdBatchSendBtn').disabled = true;
@@ -346,7 +374,7 @@ async function bdRunBatchSending(batchId, emailType) {
   if (bdActiveSendingBatchId === batchId) return;
   bdActiveSendingBatchId = batchId;
   await sb.from('bd_batches').update({ sending: true, draft: false, stopped_reason: null }).eq('id', batchId);
-  bdAppendBatchLog('Batch sending started.');
+  bdAppendBatchLog(batchId, 'Batch sending started.');
   let consecutiveFailures = 0;
 
   while (true) {
@@ -356,7 +384,7 @@ async function bdRunBatchSending(batchId, emailType) {
       .order('position').limit(1).maybeSingle();
     if (!member) break;
 
-    bdAppendBatchLog(`Sending to ${member.bd_prospects?.company || member.prospect_id}…`);
+    bdAppendBatchLog(batchId, `Sending to ${member.bd_prospects?.company || member.prospect_id}…`);
     const result = await bdCallFunction('bd-send-email', {
       mode: 'send', prospect_id: member.prospect_id, stage: emailType,
       subject: member.subject, body: member.body, batch_id: batchId, batch_member_id: member.id,
@@ -364,13 +392,13 @@ async function bdRunBatchSending(batchId, emailType) {
 
     if (result.ok) {
       consecutiveFailures = 0;
-      bdAppendBatchLog(`Sent to ${member.bd_prospects?.company || ''}.`, 'success');
+      bdAppendBatchLog(batchId, `Sent to ${member.bd_prospects?.company || ''}.`, 'success');
     } else {
-      bdAppendBatchLog(`Failed for ${member.bd_prospects?.company || ''}: ${result.reason || result.detail || 'unknown error'}`, 'error');
+      bdAppendBatchLog(batchId, `Failed for ${member.bd_prospects?.company || ''}: ${result.reason || result.detail || 'unknown error'}`, 'error');
 
       if (result.reason === 'daily_limit_reached') {
         await sb.from('bd_batches').update({ sending: false, stopped_reason: 'Daily sending limit reached' }).eq('id', batchId);
-        bdAppendBatchLog('Stopped: daily sending limit reached.', 'error');
+        bdAppendBatchLog(batchId, 'Stopped: daily sending limit reached.', 'error');
         break;
       }
 
@@ -383,7 +411,7 @@ async function bdRunBatchSending(batchId, emailType) {
         consecutiveFailures++;
         if (consecutiveFailures >= 3) {
           await sb.from('bd_batches').update({ sending: false, stopped_reason: '3 consecutive API failures' }).eq('id', batchId);
-          bdAppendBatchLog('Stopped after 3 consecutive API failures. Use Resume once the issue is fixed.', 'error');
+          bdAppendBatchLog(batchId, 'Stopped after 3 consecutive API failures. Use Resume once the issue is fixed.', 'error');
           break;
         }
       } else {
@@ -401,19 +429,25 @@ async function bdRunBatchSending(batchId, emailType) {
 
     await bdRefreshBatchDetail(batchId);
     bdLoadBatches();
-    if (document.getElementById('bdBatchModal').open === false) break;
+
+    if (bdStopRequestedBatchId === batchId) {
+      bdStopRequestedBatchId = null;
+      await sb.from('bd_batches').update({ sending: false, stopped_reason: 'Stopped manually' }).eq('id', batchId);
+      bdAppendBatchLog(batchId, 'Stopped manually.', 'error');
+      break;
+    }
 
     const { count: remaining } = await sb.from('bd_batch_members').select('id', { count: 'exact', head: true }).eq('batch_id', batchId).eq('status', 'pending');
     if ((remaining ?? 0) === 0) break;
 
-    const delayMs = 30000 + Math.random() * 60000;
+    const delayMs = 5000 + Math.random() * 10000; // 5-15s
     await bdSleep(delayMs);
   }
 
   const { count: remaining } = await sb.from('bd_batch_members').select('id', { count: 'exact', head: true }).eq('batch_id', batchId).eq('status', 'pending');
   if ((remaining ?? 0) === 0) {
     await sb.from('bd_batches').update({ sending: false, completed: true }).eq('id', batchId);
-    bdAppendBatchLog('Batch completed.', 'success');
+    bdAppendBatchLog(batchId, 'Batch completed.', 'success');
     bdToast('Batch completed.', 'success');
   }
   bdActiveSendingBatchId = null;
